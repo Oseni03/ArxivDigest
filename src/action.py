@@ -8,8 +8,9 @@ import yaml
 import os
 from dotenv import load_dotenv
 import openai
-from relevancy import generate_relevance_score, process_subject_fields
-from download_new_papers import get_papers
+from summerizer import summerize
+from relevancy import get_top_relevance_paper, process_subject_fields
+from download_new_papers import get_papers, read_paper
 
 
 # Hackathon quality code. Don't judge too harshly.
@@ -221,7 +222,14 @@ category_map = {
 }
 
 
-def generate_body(topic, categories, interest, threshold):
+def generate_podcast(topic, categories, interest, threshold):
+    """
+    interest = "
+    1. Large language model pretraining and finetunings
+    2. Multimodal machine learning
+    3. Do not care about specific application, for example, information extraction, summarization, etc.
+    4. Not interested in paper focus on specific languages, e.g., Arabic, Chinese, etc.\n"
+    """
     if topic == "Physics":
         raise RuntimeError("You must choose a physics subtopic.")
     elif topic in physics_topics:
@@ -242,32 +250,39 @@ def generate_body(topic, categories, interest, threshold):
         ]
     else:
         papers = get_papers(abbr)
+
+    contents = []
     if interest:
-        relevancy, hallucination = generate_relevance_score(
+        relevancy = get_top_relevance_paper(
             papers,
-            query={"interest": interest},
+            query=interest,
             threshold_score=threshold,
             num_paper_in_prompt=16,
         )
-        body = "<br><br>".join(
-            [
-                f'Title: <a href="{paper["main_page"]}">{paper["title"]}</a><br>Authors: {paper["authors"]}<br>Score: {paper["Relevancy score"]}<br>Reason: {paper["Reasons for match"]}'
-                for paper in relevancy
-            ]
-        )
-        if hallucination:
-            body = (
-                "Warning: the model hallucinated some papers. We have tried to remove them, but the scores may not be accurate.<br><br>"
-                + body
-            )
+
+        for paper in relevancy:
+            pdf = paper["pdf"]
+            title = paper["title"]
+
+            title_slug = title.lower().replace(" ", "_")
+            contents.append({"content": read_paper(title_slug, pdf)})
     else:
-        body = "<br><br>".join(
-            [
-                f'Title: <a href="{paper["main_page"]}">{paper["title"]}</a><br>Authors: {paper["authors"]}'
-                for paper in papers
-            ]
-        )
-    return body
+        for paper in papers:
+            pdf = paper["pdf"]
+            title = paper["title"]
+
+            title_slug = title.lower().replace(" ", "_")
+            contents.append({"content": read_paper(title_slug, pdf)})
+        
+    summaries = summerize(contents)
+    podcast_file_name, transcript_file_name = generate_podcast(summaries)
+
+    paper["podcast_file_name"] = podcast_file_name
+    paper["transcript_file_name"] = transcript_file_name
+        
+    return podcast_file_name, transcript_file_name
+
+
 
 
 if __name__ == "__main__":
@@ -291,7 +306,7 @@ if __name__ == "__main__":
     to_email = os.environ.get("TO_EMAIL")
     threshold = config["threshold"]
     interest = config["interest"]
-    body = generate_body(topic, categories, interest, threshold)
+    body = generate_podcast(topic, categories, interest, threshold)
     with open("digest.html", "w") as f:
         f.write(body)
     if os.environ.get("SENDGRID_API_KEY", None):
