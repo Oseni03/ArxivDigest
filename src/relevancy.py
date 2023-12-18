@@ -24,6 +24,7 @@ def create_documents(papers: list):
                     "authors": paper["authors"],
                     "subjects": paper["subjects"],
                     "abstract": paper["abstract"],
+                    "summary": summary,
                 }
             )
         )
@@ -72,10 +73,10 @@ def top_relevance_docs(docs, n=10):
     return top_n
 
 
-def get_top_relevance_docs(papers, query):
+def get_top_relevance_paper(papers, query):
     documents = create_documents(papers)
     docs = split_docs(documents, chunk_size=1000, chunk_overlap=0)
     db = embed_documents(docs)
     relevance_docs = get_relevance_docs_with_score(query, db)
     top_relevance_docs = top_relevance_docs(relevance_docs, n=10)
-    return top_relevance_docs
+    return [doc.metadata for doc in top_relevance_docs]
