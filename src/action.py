@@ -265,7 +265,7 @@ def generate_podcast(topic, categories, interest, threshold):
             title = paper["title"]
 
             title_slug = title.lower().replace(" ", "_")
-            contents.append({"content": read_paper(title_slug, pdf)})
+            contents.append({"title": title, "content": read_paper(title_slug, pdf)})
     else:
         for paper in papers:
             pdf = paper["pdf"]
