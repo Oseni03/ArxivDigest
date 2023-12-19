@@ -5,14 +5,15 @@ from langchain.chains.llm import LLMChain
 llm = ChatOpenAI(temperature=0)
 
 
-def summerize(papers_contents):
+def summarize(papers_contents):
+    summaries = []
     """
         Args:
             papers_contents: a list of dict
                 eg, [
-                    {"content": "content-of-research-paper1"},
-                    {"content": "content-of-research-paper2"},
-                    {"content": "content-of-research-paper3"},
+                    {"title": "title of research paper1", "content": "content-of-research-paper1"},
+                    {"title": "title of research paper2", "content": "content-of-research-paper2"},
+                    {"title": "title of research paper3", "content": "content-of-research-paper3"},
                     .
                     .
                     .
@@ -27,4 +28,9 @@ def summerize(papers_contents):
     summary:"""
     map_prompt = PromptTemplate.from_template(map_template)
     map_chain = LLMChain(llm=llm, prompt=map_prompt)
-    return map_chain.apply(papers_contents)
+    for paper in papers_contents:
+        summaries.append({
+            "title": paper["title"],
+            "summary": map_chain.run(paper["content"])
+        })
+    return summaries

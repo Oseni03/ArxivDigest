@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # source: https://github.com/unconv/ai-podcaster
 
-from elevenlabs import generate, set_api_key, save, RateLimitError
 import subprocess
 import random
 import openai
@@ -9,6 +8,13 @@ import time
 import json
 import sys
 import os
+from elevenlabs import generate, set_api_key, save, RateLimitError
+from langchain.schema import SystemMessage
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
+from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
+from langchain.llms import OpenAI
+from langchain.chat_models import ChatOpenAI
+
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 elevenlabs_key = os.getenv("ELEVENLABS_API_KEY")
@@ -57,13 +63,10 @@ def get_voice(name, gender):
     return voices[name]
 
 
-number_of_dialogs = 20
-
-system_prompt = f"""
+system_prompt = """
 You are about to create a podcast script discussing the insights derived from a research paper provided by the user. Your goal is to generate a conversational podcast script between two presenters—Adam and Ethan—based on the content of the user-provided research paper. The podcast aims to deliver engaging content while maintaining a professional and informative tone.
 
 Objective: Discuss the key findings and implications from the ruser-provided research paper. The script should provide an overview of the paper's significance and its impact on the field.
-
 Tone: Maintain a conversational yet authoritative tone. Adam and Ethan should engage the audience by discussing the paper's content with enthusiasm and expertise.
 
 Key Sections to Cover:
@@ -92,115 +95,52 @@ Additional Notes:
     Also ensure that the podcast conclude in exactly {number_of_dialogs} dialogues.
 
 Important: Please use the retrieved content from the research paper to generate the dialogues between Adam and Ethan. Provide informative discussions while capturing the essence of the paper's content in a conversational manner.
+
+Answer the users question as best as possible.
+
+{format_instructions}
 """
 
+number_of_dialogs = 20
 
-def generate_dialog(paper_summaries, podcast_id):
+def generate_dialog(paper_summaries, podcast_id, openai_api_key):
     transcript_file_name = f"podcasts/podcast{podcast_id}.txt"
     transcript_file = open(transcript_file_name, "w")
 
     dialogs = []
 
-    messages = [
-        {
-            "role": "system",
-            "content": system_prompt,
-        },
-        {
-            "role": "user",
-            "content": paper_summaries,
-        }
+    response_schemas = [
+        ResponseSchema(name="speaker", description="The name of the speaker."),
+        ResponseSchema(name="gender", description="The gender of the speaker (male or female)."),
+        ResponseSchema(name="content", description="The content of the speech.")
     ]
 
+    messages=[
+        SystemMessagePromptTemplate(system_prompt),
+        HumanMessagePromptTemplate.from_template("{paper_summaries}"),
+    ]
+    output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+    format_instructions = output_parser.get_format_instructions()
+
     for _ in range(0, number_of_dialogs):
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        prompt = ChatPromptTemplate(
             messages=messages,
-            functions=[
-                {
-                    "name": "add_dialog",
-                    "description": "Add dialog to the podcast",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "speaker": {
-                                "type": "string",
-                                "description": "The name of the speaker"
-                            },
-                            "gender": {
-                                "type": "string",
-                                "description": "The gender of the speaker (male or female)"
-                            },
-                            "content": {
-                                "type": "string",
-                                "description": "The content of the speech"
-                            }
-                        },
-                        "required": ["speaker", "gender", "content"]
-                    }
-                }
-            ],
-            function_call={
-                "name": "add_dialog",
-                "arguments": ["speaker", "gender", "content"]
-            }
+            input_variables=["paper_summaries"],
+            partial_variables={"format_instructions": format_instructions, "number_of_dialogs": number_of_dialogs}
         )
 
-        message = response["choices"][0]["message"] # type: ignore
+        chat_model = ChatOpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=openai_api_key)
 
-        messages.append(message)
+        _input = prompt.format_prompt(paper_summaries=paper_summaries)
+        output = chat_model(_input.to_messages())
 
-        function_call = message["function_call"]
-        arguments = json.loads(function_call["arguments"])
+        messages.append(output)
 
-        transcript_file.write(arguments['speaker'] + ": " + arguments['content'] + "\n")
+        parsed_output = output_parser.parse(output.content)
 
-        dialogs.append(arguments)
-    
-    # for _ in range(0, 2):
-    #     response = openai.ChatCompletion.create(
-    #         model="gpt-3.5-turbo",
-    #         messages=messages,
-    #         functions=[
-    #             {
-    #                 "name": "add_conclusion_dialogue",
-    #                 "description": "Add conclusion dialogue to the podcast",
-    #                 "parameters": {
-    #                     "type": "object",
-    #                     "properties": {
-    #                         "speaker": {
-    #                             "type": "string",
-    #                             "description": "The name of the speaker"
-    #                         },
-    #                         "gender": {
-    #                             "type": "string",
-    #                             "description": "The gender of the speaker (male or female)"
-    #                         },
-    #                         "content": {
-    #                             "type": "string",
-    #                             "description": "The content of the speech"
-    #                         }
-    #                     },
-    #                     "required": ["speaker", "gender", "content"]
-    #                 }
-    #             }
-    #         ],
-    #         function_call={
-    #             "name": "add_conclusion_dialogue",
-    #             "arguments": ["speaker", "gender", "content"]
-    #         }
-    #     )
+        transcript_file.write(parsed_output['speaker'] + ": " + parsed_output['content'] + "\n")
 
-        message = response["choices"][0]["message"] # type: ignore
-
-        messages.append(message)
-
-        function_call = message["function_call"]
-        arguments = json.loads(function_call["arguments"])
-
-        transcript_file.write(arguments['speaker'] + ": " + arguments['content'] + "\n")
-
-        dialogs.append(arguments)
+        dialogs.append(parsed_output)
 
     transcript_file.close()
     return (dialogs, transcript_file_name)

@@ -8,7 +8,7 @@ import yaml
 import os
 from dotenv import load_dotenv
 import openai
-from summerizer import summerize
+from summarizer import summarize
 from relevancy import get_top_relevance_paper, process_subject_fields
 from download_new_papers import get_papers, read_paper
 
@@ -272,9 +272,9 @@ def generate_podcast(topic, categories, interest, threshold):
             title = paper["title"]
 
             title_slug = title.lower().replace(" ", "_")
-            contents.append({"content": read_paper(title_slug, pdf)})
+            contents.append({"title": title, "content": read_paper(title_slug, pdf)})
         
-    summaries = summerize(contents)
+    summaries = summarize(contents)
     podcast_file_name, transcript_file_name = generate_podcast(summaries)
 
     paper["podcast_file_name"] = podcast_file_name
