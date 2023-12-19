@@ -95,7 +95,7 @@ Important: Please use the retrieved content from the research paper to generate 
 """
 
 
-def generate_dialog(paper_content, podcast_id):
+def generate_dialog(paper_summaries, podcast_id):
     transcript_file_name = f"podcasts/podcast{podcast_id}.txt"
     transcript_file = open(transcript_file_name, "w")
 
@@ -108,7 +108,7 @@ def generate_dialog(paper_content, podcast_id):
         },
         {
             "role": "user",
-            "content": paper_content,
+            "content": paper_summaries,
         }
     ]
 
@@ -215,13 +215,13 @@ def generate_audio(speaker, gender, content, filename):
     save(audio, filename) # type: ignore
 
 
-def generate_podcast(paper_content, podcast_id=f"{time.time()}"):
+def generate_podcast(paper_summaries, podcast_id=f"{time.time()}"):
     dialog_files = []
     concat_file = open("concat.txt", "w")
 
     print("Generating transcript")
 
-    dialogs, transcript_file_name = generate_dialog(paper_content, podcast_id)
+    dialogs, transcript_file_name = generate_dialog(paper_summaries, podcast_id)
 
     print("Generating audio")
     try:
@@ -251,8 +251,8 @@ def generate_podcast(paper_content, podcast_id=f"{time.time()}"):
 
 if __name__ == "__main__":
     with open("", "r") as file:
-        paper_content = file.read()
-    podcast_file_name, transcript_file_name = generate_podcast(paper_content)
+        paper_summaries = file.read()
+    podcast_file_name, transcript_file_name = generate_podcast(paper_summaries)
     print("\n## Podcast is ready! ##")
     print("Audio: " + podcast_file_name)
     print("Transcript: " + transcript_file_name)
