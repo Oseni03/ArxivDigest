@@ -6,14 +6,11 @@ llm = ChatOpenAI(temperature=0)
 
 
 def summarize(papers_contents):
-    summaries = []
     """
         Args:
             papers_contents: a list of dict
                 eg, [
                     {"title": "title of research paper1", "content": "content-of-research-paper1"},
-                    {"title": "title of research paper2", "content": "content-of-research-paper2"},
-                    {"title": "title of research paper3", "content": "content-of-research-paper3"},
                     .
                     .
                     .
@@ -29,8 +26,5 @@ def summarize(papers_contents):
     map_prompt = PromptTemplate.from_template(map_template)
     map_chain = LLMChain(llm=llm, prompt=map_prompt)
     for paper in papers_contents:
-        summaries.append({
-            "title": paper["title"],
-            "summary": map_chain.run(paper["content"])
-        })
-    return summaries
+        paper["summary"] = map_chain.run(paper["content"])
+    return papers_contents

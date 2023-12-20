@@ -2,6 +2,7 @@
 # source: https://github.com/unconv/ai-podcaster
 
 import subprocess
+import datetime 
 import random
 import openai
 import time
@@ -104,7 +105,14 @@ Answer the users question as best as possible.
 number_of_dialogs = 20
 
 def generate_dialog(paper_summaries, podcast_id, openai_api_key):
-    transcript_file_name = f"podcasts/podcast{podcast_id}.txt"
+    summaries = [
+        {
+            "title": summary["title"],
+            "summary": summary["abstract"] + "\n\n" + summary["summary"]
+        }
+        for summary in paper_summaries
+    ]
+    transcript_file_name = f"podcasts/podcast_{podcast_id}.txt"
     transcript_file = open(transcript_file_name, "w")
 
     dialogs = []
@@ -117,7 +125,7 @@ def generate_dialog(paper_summaries, podcast_id, openai_api_key):
 
     messages=[
         SystemMessagePromptTemplate(system_prompt),
-        HumanMessagePromptTemplate.from_template("{paper_summaries}"),
+        HumanMessagePromptTemplate.from_template("{summaries}"),
     ]
     output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
     format_instructions = output_parser.get_format_instructions()
@@ -125,13 +133,13 @@ def generate_dialog(paper_summaries, podcast_id, openai_api_key):
     for _ in range(0, number_of_dialogs):
         prompt = ChatPromptTemplate(
             messages=messages,
-            input_variables=["paper_summaries"],
+            input_variables=["summaries"],
             partial_variables={"format_instructions": format_instructions, "number_of_dialogs": number_of_dialogs}
         )
 
         chat_model = ChatOpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=openai_api_key)
 
-        _input = prompt.format_prompt(paper_summaries=paper_summaries)
+        _input = prompt.format_prompt(summaries=summaries)
         output = chat_model(_input.to_messages())
 
         messages.append(output)
@@ -155,7 +163,7 @@ def generate_audio(speaker, gender, content, filename):
     save(audio, filename) # type: ignore
 
 
-def generate_podcast(paper_summaries, podcast_id=f"{time.time()}"):
+def generate_podcast(paper_summaries, podcast_id=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
     dialog_files = []
     concat_file = open("concat.txt", "w")
 

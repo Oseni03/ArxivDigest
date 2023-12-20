@@ -46,12 +46,11 @@ def embed_documents(docs, type="huggingface", id=datetime.datetime.now().strftim
         embedding_function = OpenAIEmbeddings()
     else:
         embedding_function = FakeEmbeddings(size=1352)
-
-    # load it into Chroma
+    
     db = FAISS.from_documents(docs, embedding_function)
     if not os.path.exists("./data"):
         os.makedirs("./data")
-    db.save_local(f"./data/faiss_index{id}")
+    db.save_local(f"./data/faiss_index_{id}")
     return db
 
 
@@ -64,7 +63,7 @@ def get_relevance_docs_with_score(query, db):
 def top_relevance_docs(docs, n=10):
     scores = [doc[-1] for doc in docs]
     ranks = sorted(scores, reverse=True)[:n]
-
+    
     top_n = []
     for (doc, score) in docs:
         for rank in ranks:
@@ -75,8 +74,8 @@ def top_relevance_docs(docs, n=10):
 
 def get_top_relevance_paper(papers, query):
     documents = create_documents(papers)
-    docs = split_docs(documents, chunk_size=1000, chunk_overlap=0)
-    db = embed_documents(docs)
+    # docs = split_docs(documents, chunk_size=1000, chunk_overlap=0)
+    db = embed_documents(documents)
     relevance_docs = get_relevance_docs_with_score(query, db)
     top_relevance_docs = top_relevance_docs(relevance_docs, n=10)
     return [doc.metadata for doc in top_relevance_docs]

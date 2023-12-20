@@ -222,7 +222,7 @@ category_map = {
 }
 
 
-def generate_podcast(topic, categories, interest, threshold):
+def main(topic, categories, interest, threshold):
     """
     interest = "
     1. Large language model pretraining and finetunings
@@ -265,22 +265,40 @@ def generate_podcast(topic, categories, interest, threshold):
             title = paper["title"]
 
             title_slug = title.lower().replace(" ", "_")
-            contents.append({"title": title, "content": read_paper(title_slug, pdf)})
+            contents.append({
+                "title": title, 
+                "content": read_paper(title_slug, pdf),
+                "authors": paper["authors"], 
+                "subjects": paper["subjects"], 
+                "abstract": paper["abstract"],
+                "main_page": paper["main_page"],
+                "pdf": paper["pdf"],
+            })
     else:
         for paper in papers:
             pdf = paper["pdf"]
             title = paper["title"]
 
             title_slug = title.lower().replace(" ", "_")
-            contents.append({"title": title, "content": read_paper(title_slug, pdf)})
+            contents.append({
+                "title": title, 
+                "content": read_paper(title_slug, pdf),
+                "authors": paper["authors"], 
+                "subjects": paper["subjects"], 
+                "abstract": paper["abstract"],
+                "main_page": paper["main_page"],
+                "pdf": paper["pdf"],
+            })
         
     summaries = summarize(contents)
+    body = "<br><br>".join(
+        [
+            f'Title: <a href="{paper["main_page"]}">{paper["title"]}</a><br>Authors: {paper["authors"]}<br>Subjects: {paper["subjects"]}<br>Summary: {paper["summary"]}'
+            for paper in contents
+        ]
+    )
     podcast_file_name, transcript_file_name = generate_podcast(summaries)
-
-    paper["podcast_file_name"] = podcast_file_name
-    paper["transcript_file_name"] = transcript_file_name
-        
-    return podcast_file_name, transcript_file_name
+    return podcast_file_name, transcript_file_name, body
 
 
 
@@ -306,7 +324,7 @@ if __name__ == "__main__":
     to_email = os.environ.get("TO_EMAIL")
     threshold = config["threshold"]
     interest = config["interest"]
-    body = generate_podcast(topic, categories, interest, threshold)
+    podcast_file_name, transcript_file_name, body = main(topic, categories, interest, threshold)
     with open("digest.html", "w") as f:
         f.write(body)
     if os.environ.get("SENDGRID_API_KEY", None):
