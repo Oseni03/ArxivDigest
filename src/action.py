@@ -8,6 +8,7 @@ import yaml
 import os
 from dotenv import load_dotenv
 import openai
+from podcast import generate_podcast
 from summarizer import summarize
 from relevancy import get_top_relevance_paper, process_subject_fields
 from download_new_papers import get_papers, read_paper
@@ -265,31 +266,35 @@ def main(topic, categories, interest, threshold):
             title = paper["title"]
 
             title_slug = title.lower().replace(" ", "_")
-            contents.append({
-                "title": title, 
-                "content": read_paper(title_slug, pdf),
-                "authors": paper["authors"], 
-                "subjects": paper["subjects"], 
-                "abstract": paper["abstract"],
-                "main_page": paper["main_page"],
-                "pdf": paper["pdf"],
-            })
+            contents.append(
+                {
+                    "title": title,
+                    "content": read_paper(title_slug, pdf),
+                    "authors": paper["authors"],
+                    "subjects": paper["subjects"],
+                    "abstract": paper["abstract"],
+                    "main_page": paper["main_page"],
+                    "pdf": paper["pdf"],
+                }
+            )
     else:
         for paper in papers:
             pdf = paper["pdf"]
             title = paper["title"]
 
             title_slug = title.lower().replace(" ", "_")
-            contents.append({
-                "title": title, 
-                "content": read_paper(title_slug, pdf),
-                "authors": paper["authors"], 
-                "subjects": paper["subjects"], 
-                "abstract": paper["abstract"],
-                "main_page": paper["main_page"],
-                "pdf": paper["pdf"],
-            })
-        
+            contents.append(
+                {
+                    "title": title,
+                    "content": read_paper(title_slug, pdf),
+                    "authors": paper["authors"],
+                    "subjects": paper["subjects"],
+                    "abstract": paper["abstract"],
+                    "main_page": paper["main_page"],
+                    "pdf": paper["pdf"],
+                }
+            )
+
     summaries = summarize(contents)
     body = "<br><br>".join(
         [
@@ -299,8 +304,6 @@ def main(topic, categories, interest, threshold):
     )
     podcast_file_name, transcript_file_name = generate_podcast(summaries)
     return podcast_file_name, transcript_file_name, body
-
-
 
 
 if __name__ == "__main__":
@@ -324,7 +327,9 @@ if __name__ == "__main__":
     to_email = os.environ.get("TO_EMAIL")
     threshold = config["threshold"]
     interest = config["interest"]
-    podcast_file_name, transcript_file_name, body = main(topic, categories, interest, threshold)
+    podcast_file_name, transcript_file_name, body = main(
+        topic, categories, interest, threshold
+    )
     with open("digest.html", "w") as f:
         f.write(body)
     if os.environ.get("SENDGRID_API_KEY", None):

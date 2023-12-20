@@ -7,14 +7,22 @@ llm = ChatOpenAI(temperature=0)
 
 def summarize(papers_contents):
     """
-        Args:
-            papers_contents: a list of dict
-                eg, [
-                    {"title": "title of research paper1", "content": "content-of-research-paper1"},
-                    .
-                    .
-                    .
-                ]
+    Args:
+        papers_contents: a list of dict
+            eg, [
+                {
+                    "title": "title of research paper1",
+                    "content": "content-of-research-paper1",
+                    "authors": "authors",
+                    "subjects": "subject1, subject2",
+                    "abstract": "little-summary",
+                    "main_page": "page-url",
+                    "pdf": "pdf-url",
+                },
+                .
+                .
+                .
+            ]
     """
     # Map
     map_template = """Given the content of your research paper, please provide a concise summary highlighting the most insightful points and key findings.

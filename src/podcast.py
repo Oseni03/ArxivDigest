@@ -2,7 +2,7 @@
 # source: https://github.com/unconv/ai-podcaster
 
 import subprocess
-import datetime 
+import datetime
 import random
 import openai
 import time
@@ -12,7 +12,11 @@ import os
 from elevenlabs import generate, set_api_key, save, RateLimitError
 from langchain.schema import SystemMessage
 from langchain.output_parsers import StructuredOutputParser, ResponseSchema
-from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
+from langchain.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
+)
 from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
 
@@ -52,10 +56,11 @@ voice_names = {
         "Emily",
         "Gigi",
         "Grace",
-    ]
+    ],
 }
 
 voices = {}
+
 
 def get_voice(name, gender):
     if name not in voices:
@@ -104,11 +109,12 @@ Answer the users question as best as possible.
 
 number_of_dialogs = 20
 
+
 def generate_dialog(paper_summaries, podcast_id, openai_api_key):
     summaries = [
         {
             "title": summary["title"],
-            "summary": summary["abstract"] + "\n\n" + summary["summary"]
+            "summary": summary["abstract"] + "\n\n" + summary["summary"],
         }
         for summary in paper_summaries
     ]
@@ -119,11 +125,13 @@ def generate_dialog(paper_summaries, podcast_id, openai_api_key):
 
     response_schemas = [
         ResponseSchema(name="speaker", description="The name of the speaker."),
-        ResponseSchema(name="gender", description="The gender of the speaker (male or female)."),
-        ResponseSchema(name="content", description="The content of the speech.")
+        ResponseSchema(
+            name="gender", description="The gender of the speaker (male or female)."
+        ),
+        ResponseSchema(name="content", description="The content of the speech."),
     ]
 
-    messages=[
+    messages = [
         SystemMessagePromptTemplate(system_prompt),
         HumanMessagePromptTemplate.from_template("{summaries}"),
     ]
@@ -134,10 +142,15 @@ def generate_dialog(paper_summaries, podcast_id, openai_api_key):
         prompt = ChatPromptTemplate(
             messages=messages,
             input_variables=["summaries"],
-            partial_variables={"format_instructions": format_instructions, "number_of_dialogs": number_of_dialogs}
+            partial_variables={
+                "format_instructions": format_instructions,
+                "number_of_dialogs": number_of_dialogs,
+            },
         )
 
-        chat_model = ChatOpenAI(temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=openai_api_key)
+        chat_model = ChatOpenAI(
+            temperature=0.5, model_name="gpt-3.5-turbo", openai_api_key=openai_api_key
+        )
 
         _input = prompt.format_prompt(summaries=summaries)
         output = chat_model(_input.to_messages())
@@ -146,7 +159,9 @@ def generate_dialog(paper_summaries, podcast_id, openai_api_key):
 
         parsed_output = output_parser.parse(output.content)
 
-        transcript_file.write(parsed_output['speaker'] + ": " + parsed_output['content'] + "\n")
+        transcript_file.write(
+            parsed_output["speaker"] + ": " + parsed_output["content"] + "\n"
+        )
 
         dialogs.append(parsed_output)
 
@@ -158,12 +173,14 @@ def generate_audio(speaker, gender, content, filename):
     audio = generate(
         text=content,
         voice=get_voice(speaker, gender.lower()),
-        model="eleven_monolingual_v1"
+        model="eleven_monolingual_v1",
     )
-    save(audio, filename) # type: ignore
+    save(audio, filename)  # type: ignore
 
 
-def generate_podcast(paper_summaries, podcast_id=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
+def generate_podcast(
+    paper_summaries, podcast_id=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+):
     dialog_files = []
     concat_file = open("concat.txt", "w")
 
@@ -176,7 +193,9 @@ def generate_podcast(paper_summaries, podcast_id=datetime.datetime.now().strftim
         for i, dialog in enumerate(dialogs):
             filename = f"dialogs/dialog{i}.wav"
 
-            generate_audio(dialog["speaker"], dialog["gender"], dialog["content"], filename)
+            generate_audio(
+                dialog["speaker"], dialog["gender"], dialog["content"], filename
+            )
 
             concat_file.write("file " + filename + "\n")
             dialog_files.append(filename)
@@ -188,7 +207,12 @@ def generate_podcast(paper_summaries, podcast_id=datetime.datetime.now().strftim
     podcast_file_name = f"podcasts/podcast{podcast_id}.wav"
 
     print("Concatenating audio")
-    subprocess.run(f"ffmpeg -f concat -safe 0 -i concat.txt -c copy {podcast_file_name}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(
+        f"ffmpeg -f concat -safe 0 -i concat.txt -c copy {podcast_file_name}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
 
     os.unlink("concat.txt")
 
