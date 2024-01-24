@@ -126,9 +126,12 @@ def read_paper(title, pdf_url):
 
 if __name__ == "__main__":
     # Provide the URL of the PDF file
-    pdf_url = "https://arxiv.org/pdf/2312.04567"  # Replace this with your PDF URL
-    text_from_pdf = read_paper("sample", pdf_url)
+    # pdf_url = "https://arxiv.org/pdf/2312.04567"  # Replace this with your PDF URL
+    # text_from_pdf = read_paper("sample", pdf_url)
 
-    if text_from_pdf:
-        print("Text extracted from the PDF:")
-        print(text_from_pdf)
+    # if text_from_pdf:
+    #     print("Text extracted from the PDF:")
+    #     print(text_from_pdf)
+
+    papers = get_papers("cs.AI")
+    print(papers)
