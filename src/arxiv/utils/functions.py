@@ -36,6 +36,7 @@ falcon_llm = HuggingFaceHub(
 # Load a video transcript from YouTube
 # --------------------------------------------------------------
 
+
 def youtube_summarizer(video_url="https://www.youtube.com/watch?v=riXpu1tHzl0"):
     loader = YoutubeLoader.from_youtube_url(video_url)
     transcript = loader.load()
@@ -64,7 +65,6 @@ def youtube_summarizer(video_url="https://www.youtube.com/watch?v=riXpu1tHzl0"):
 
 
 def paper_summerizer(user_input):
-
     template = """
     
     Given a research paper abstract.
@@ -89,7 +89,6 @@ def paper_summerizer(user_input):
 
 
 def newsletter_generator(user_input):
-
     template = """
     
     You are professional content marketer.
@@ -117,8 +116,7 @@ def newsletter_generator(user_input):
     return response
 
 
-
-if "__name__"=="__main__":
+if "__name__" == "__main__":
     research_paper = """
     Truck Parking Usage Prediction with Decomposed Graph Neural Networks
 
